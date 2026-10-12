@@ -1,5 +1,9 @@
 # AGENTS.md
 
+## Continuidad del proyecto
+
+Antes de continuar en otra sesión o PC, leer `docs/traspaso-codex.md` y `docs/sistema-votaciones-funcional.md`. El modo GUID actual es una fase temporal de pruebas, no autenticación criptográfica. No ejecutar `pa app push` automáticamente ni repetir migraciones ya aplicadas. Verificar estado remoto y caducidad antes de actuar.
+
 <!-- INSFORGE:START -->
 ## InsForge backend
 
