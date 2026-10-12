@@ -1,0 +1,44 @@
+{
+  "name": "vite",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "lint": "eslint .",
+    "preview": "vite preview",
+    "test": "node --test tests/*.test.mjs",
+    "check:rbac": "tsc -p tsconfig.rbac.json",
+    "dev:rbac": "node --env-file-if-exists=.env.rbac.local scripts/rbac-demo-server.mjs",
+    "dev:auth": "node --env-file-if-exists=.env.rbac.local --env-file=.env.auth.local scripts/auth-server.mjs",
+    "build:function": "node scripts/build-access-function.mjs",
+    "connect:access": "node scripts/connect-powerapps-access.mjs",
+    "build:functional": "node scripts/build-functional.mjs"
+  },
+  "dependencies": {
+    "@microsoft/power-apps": "^1.2.5",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "0.5.8",
+    "@eslint/js": "^9.39.1",
+    "@microsoft/power-apps-cli": "1.2.0",
+    "@microsoft/power-apps-vite": "^1.0.2",
+    "@types/node": "^24.10.1",
+    "@types/react": "^19.2.5",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^5.1.1",
+    "esbuild": "0.28.2",
+    "eslint": "^9.39.1",
+    "eslint-plugin-react-hooks": "^7.0.1",
+    "eslint-plugin-react-refresh": "^0.4.24",
+    "globals": "^16.5.0",
+    "jose": "6.2.12",
+    "postgres": "3.4.9",
+    "typescript": "~5.9.3",
+    "typescript-eslint": "^8.46.4",
+    "vite": "^7.2.4"
+  }
+}

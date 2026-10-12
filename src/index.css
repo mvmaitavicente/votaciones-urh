@@ -1,0 +1,5 @@
+﻿:root { font-family: 'Segoe UI', system-ui, sans-serif; color: #1c2f48; background: #f3f5f8; font-synthesis: none; text-rendering: optimizeLegibility; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; line-height: 1.5; color-scheme: light; }
+* { box-sizing: border-box; }
+body { margin: 0; min-width: 320px; }
+button, input, select { font: inherit; -webkit-tap-highlight-color: transparent; }
+::selection { background: #d6e7fc; }

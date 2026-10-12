@@ -1,0 +1,15 @@
+{
+  "version": "1.0",
+  "appId": "a7d85902-8453-4c09-a150-63457b377c9d",
+  "appDisplayName": "URH - SISTEMA DE VOTACIONES",
+  "region": "prod",
+  "appType": "CodeApp",
+  "environmentId": "5b61b3f5-0e90-e928-bcae-e69127947f06",
+  "description": " ",
+  "buildPath": "./dist",
+  "buildEntryPoint": "index.html",
+  "localAppUrl": "http://localhost:3000",
+  "logoPath": "Default",
+  "connectionReferences": {},
+  "databaseReferences": {}
+}
