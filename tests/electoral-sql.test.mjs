@@ -5,10 +5,10 @@ import {PGlite} from '@electric-sql/pglite'
 
 const tenant='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
 const object=n=>`00000000-0000-4000-8000-${String(n).padStart(12,'0')}`
-async function database(){const db=new PGlite();await db.exec(fs.readFileSync('tests/fixtures/electoral-schema.sql','utf8'));await db.exec(fs.readFileSync('migrations/20261012080000_urh-functional.sql','utf8'));await db.exec(fs.readFileSync('migrations/20261012180000_candidatura-persona.sql','utf8'));await db.exec(fs.readFileSync('migrations/20261012190000_candidatura-unidad.sql','utf8'));await db.exec(fs.readFileSync('migrations/20261012200000_candidatura-foto.sql','utf8'));await db.exec(fs.readFileSync('migrations/20261012210000_opciones-unidad.sql','utf8'));await db.exec(fs.readFileSync('migrations/20261012220000_evento-subtitulo-mensaje-elector.sql','utf8'));await db.exec(fs.readFileSync('migrations/20261012230000_fecha-voto-mis-padrones.sql','utf8'));
+async function database(){const db=new PGlite();await db.exec(fs.readFileSync('tests/fixtures/electoral-schema.sql','utf8'));await db.exec(fs.readFileSync('migrations/20261012080000_urh-functional.sql','utf8'));await db.exec(fs.readFileSync('migrations/20261012180000_candidatura-persona.sql','utf8'));await db.exec(fs.readFileSync('migrations/20261012190000_candidatura-unidad.sql','utf8'));await db.exec(fs.readFileSync('migrations/20261012200000_candidatura-foto.sql','utf8'));await db.exec(fs.readFileSync('migrations/20261012210000_opciones-unidad.sql','utf8'));await db.exec(fs.readFileSync('migrations/20261012220000_evento-subtitulo-mensaje-elector.sql','utf8'));await db.exec(fs.readFileSync('migrations/20261012230000_fecha-voto-mis-padrones.sql','utf8'));await db.exec(fs.readFileSync('tests/fixtures/electoral-rpc-before-provisional.sql','utf8'));await db.exec(fs.readFileSync('migrations/20261012230001_resultados-provisionales-admin.sql','utf8'));await db.exec(fs.readFileSync('migrations/20261013010000_participacion-detalle-personas.sql','utf8'));await db.exec(fs.readFileSync('migrations/20261013020000_resultados-total-evento.sql','utf8'));await db.exec(fs.readFileSync('migrations/20261013030000_rol-supervisor-resultados.sql','utf8'));
   await db.exec("INSERT INTO urh_votacion.rol(codigo) VALUES('ADMINISTRADOR'),('ELECTOR'); INSERT INTO urh_votacion.dependencia(dsc_dependencia) VALUES('Oficina ficticia'); INSERT INTO urh_votacion.personal(nombres,activo) VALUES('Admin ficticio',true),('Elector ficticio',true),('Ambos ficticio',true); UPDATE urh_votacion.personal SET correo_institucional='elector@example.test',id_dependencia=1 WHERE id_personal=2");
   for(let n=1;n<=5;n++)await db.query('INSERT INTO urh_votacion.usuario(id_object,id_tenant,nombre,activo,id_persona) VALUES($1,$2,$3,$4,$5)',[object(n),tenant,'Cuenta ficticia '+n,n!==4,n<=3?n:null]);
-  await db.exec('INSERT INTO urh_votacion.usuario_rol(id_usuario,id_rol) VALUES(1,1),(2,2),(3,1),(3,2),(4,2)');
+  await db.exec("INSERT INTO urh_votacion.usuario_rol(id_usuario,id_rol) SELECT v.id_usuario,r.id_rol FROM (VALUES(1,'ADMINISTRADOR'),(2,'ELECTOR'),(3,'ADMINISTRADOR'),(3,'ELECTOR'),(4,'ELECTOR')) v(id_usuario,codigo) JOIN urh_votacion.rol r ON r.codigo=v.codigo");
   return db}
 const call=async(db,n,action,data={})=>(await db.query('SELECT urh_votacion.urh_operacion($1::uuid,$2::uuid,$3,$4::jsonb) AS result',[object(n),tenant,action,JSON.stringify(data)])).rows[0].result
 async function election(db){
@@ -22,6 +22,98 @@ async function election(db){
   const inicio=new Date(Date.now()-3600000).toISOString(),fin=new Date(Date.now()+3600000).toISOString();
   await call(db,1,'guardar_evento',{id_evento:event.id,dsc_evento:'Evento ficticio',dsc_sub_titulo:'Subtítulo ficticio',dsc_mensaje:'Indicaciones ficticias',estado:'ABIERTO',fecha_inicio:inicio,fecha_fin:fin});
   return{event:event.id,padron:padron.id,option,candidate:candidate.id,inicio,fin}}
+
+test('Resultados provisionales: configuración previa, conteo actualizado y acceso exclusivo del administrador',async()=>{const db=await database();try{
+  const e=await election(db);
+  const event={id_evento:e.event,dsc_evento:'Evento ficticio',fecha_inicio:e.inicio,fecha_fin:e.fin};
+  await assert.rejects(call(db,1,'guardar_evento',{...event,estado:'ABIERTO',resultados_en_vivo:true}),/CONFIGURACION_BLOQUEADA/);
+  await call(db,1,'guardar_evento',{...event,estado:'BORRADOR'});
+  await call(db,1,'guardar_evento',{...event,estado:'BORRADOR',resultados_en_vivo:true});
+  await assert.rejects(call(db,1,'resultados',{id_padron:e.padron}),/RESULTADOS_NO_DISPONIBLES/);
+  await call(db,1,'guardar_evento',{...event,estado:'ABIERTO'});
+  assert.equal((await call(db,1,'administracion')).eventos[0].resultados_en_vivo,true);
+  assert.equal((await call(db,1,'resultados',{id_padron:e.padron}))[0].votos,0);
+  await call(db,2,'emitir_voto',{id_padron:e.padron,id_opcion_electoral:e.option});
+  assert.equal((await call(db,1,'resultados',{id_padron:e.padron}))[0].votos,1);
+  assert.equal((await call(db,3,'resultados',{id_padron:e.padron}))[0].votos,1);
+  await assert.rejects(call(db,2,'resultados',{id_padron:e.padron}),/PERMISO_INSUFICIENTE/);
+  await assert.rejects(call(db,2,'resultados_publicos',{id_padron:e.padron}),/RESULTADOS_NO_DISPONIBLES/);
+  await assert.rejects(call(db,1,'guardar_evento',{...event,estado:'ABIERTO',resultados_en_vivo:false}),/CONFIGURACION_BLOQUEADA/);
+  await call(db,1,'guardar_evento',{...event,estado:'CERRADO'});
+  assert.equal((await call(db,1,'resultados',{id_padron:e.padron}))[0].votos,1);
+  await assert.rejects(call(db,2,'resultados_publicos',{id_padron:e.padron}),/RESULTADOS_NO_DISPONIBLES/);
+}finally{await db.close()}})
+
+test('Detalle de participación: datos de personas, pendientes y participantes sin elección de voto',async()=>{const db=await database();try{
+  const e=await election(db);
+  await db.query('INSERT INTO urh_votacion.padron_detalle(id_padron,id_persona,habilitado) VALUES($1,3,true)',[e.padron]);
+  const before=await call(db,1,'participacion',{id_padron:e.padron});
+  assert.equal(before.habilitados,2);assert.equal(before.participantes,0);assert.equal(before.detalle.length,2);
+  const elector=before.detalle.find(p=>p.nombre==='Elector ficticio');
+  assert.equal(elector.unidad_organica,'Oficina ficticia');assert.equal(elector.correo,'elector@example.test');assert.equal(elector.segmento,'Categoría');assert.equal(elector.ya_voto,false);assert.ok(elector.id_padron_detalle);
+  const other=before.detalle.find(p=>p.nombre==='Ambos ficticio');assert.equal(other.unidad_organica,null);assert.equal(other.correo,null);
+  await call(db,2,'emitir_voto',{id_padron:e.padron,id_opcion_electoral:e.option});
+  const after=await call(db,1,'participacion',{id_padron:e.padron});
+  assert.equal(after.participantes,1);assert.equal(after.detalle.filter(p=>p.ya_voto).length,1);assert.equal(after.detalle.filter(p=>!p.ya_voto).length,1);
+  assert.deepEqual(Object.keys(after.detalle[0]).sort(),['correo','id_padron_detalle','nombre','segmento','unidad_organica','ya_voto']);
+  await assert.rejects(call(db,2,'participacion',{id_padron:e.padron}),/PERMISO_INSUFICIENTE/);
+}finally{await db.close()}})
+
+test('Total del evento agrega segmentos sin multiplicar electores por opciones y no filtra identidad al resumen',async()=>{const db=await database();try{
+  const e=await election(db);
+  const sg=await call(db,1,'guardar_segmento',{dsc_segmento:'Segundo segmento',ord_segmento:2});
+  const pa=(await db.query('INSERT INTO urh_votacion.padron(id_evento,id_segmento,nom_padron) VALUES($1,$2,$3) RETURNING id_padron',[e.event,sg.id,'Segundo padrón'])).rows[0].id_padron;
+  await db.query('INSERT INTO urh_votacion.padron_detalle(id_padron,id_persona,habilitado) VALUES($1,3,true),($1,1,false)',[pa]);
+  await db.query("INSERT INTO urh_votacion.opcion_electoral(id_padron,tipo_opcion,nombre,orden,activo) VALUES($1,'BLANCO','Blanco',2,true)",[e.padron]);
+  const request={id_evento:e.event,modo:'resumen'};
+  let total=await call(db,1,'participacion',request);
+  assert.equal(total.version,1);assert.equal(total.habilitados,2);assert.equal(total.participantes,0);assert.equal(total.segmentos.length,2);assert.equal(total.resultados_disponibles,false);
+  assert.equal(total.segmentos[0].nombre,'Categoría');assert.equal(total.segmentos[1].nombre,'Segundo segmento');
+  assert.deepEqual(total.segmentos.flatMap(s=>s.resultados),[]);assert.equal('detalle' in total,false);
+  await assert.rejects(call(db,2,'participacion',request),/PERMISO_INSUFICIENTE/);
+  await assert.rejects(call(db,1,'participacion',{id_evento:-1,modo:'resumen'}),/EVENTO_INVALIDO/);
+  await call(db,1,'guardar_evento',{id_evento:e.event,dsc_evento:'Evento ficticio',estado:'BORRADOR',fecha_inicio:e.inicio,fecha_fin:e.fin});
+  await call(db,1,'guardar_evento',{id_evento:e.event,dsc_evento:'Evento ficticio',estado:'ABIERTO',fecha_inicio:e.inicio,fecha_fin:e.fin,resultados_en_vivo:true});
+  await call(db,2,'emitir_voto',{id_padron:e.padron,id_opcion_electoral:e.option});
+  total=await call(db,1,'participacion',request);
+  assert.equal(total.habilitados,2);assert.equal(total.participantes,1);assert.equal(total.resultados_disponibles,true);
+  assert.equal(total.segmentos[0].participantes,1);assert.equal(total.segmentos[1].participantes,0);
+  assert.equal(total.segmentos[0].resultados.find(r=>r.tipo_opcion==='CANDIDATURA').votos,1);
+  assert.equal(total.segmentos[0].resultados.find(r=>r.tipo_opcion==='BLANCO').votos,0);
+  const people=await call(db,1,'participacion',{id_evento:e.event,modo:'personas'});
+  assert.equal(people.detalle.length,2);assert.equal(people.detalle.filter(p=>p.ya_voto).length,1);
+  assert.equal(people.detalle.find(p=>p.nombre==='Ambos ficticio').segmento,'Segundo segmento');
+  await assert.rejects(call(db,2,'participacion',{id_evento:e.event,modo:'personas'}),/PERMISO_INSUFICIENTE/);
+  const emptyEvent=await call(db,1,'guardar_evento',{dsc_evento:'Otro evento sin padrones',estado:'BORRADOR'});
+  const emptySummary=await call(db,1,'participacion',{id_evento:emptyEvent.id,modo:'resumen'});
+  assert.equal(emptySummary.habilitados,0);assert.equal(emptySummary.participantes,0);assert.deepEqual(emptySummary.segmentos,[]);
+  assert.equal((await call(db,1,'participacion',request)).habilitados,2);
+  await assert.rejects(call(db,1,'participacion',{id_evento:e.event,modo:'otro'}),/SOLICITUD_INVALIDA/);
+}finally{await db.close()}})
+
+test('SUPERVISOR consulta Resultados y participación pero no administra; combinado con ELECTOR puede votar',async()=>{const db=await database();try{
+  const e=await election(db);
+  const role=(await db.query("SELECT id_rol FROM urh_votacion.rol WHERE codigo='SUPERVISOR'")).rows[0].id_rol;
+  await db.query('INSERT INTO urh_votacion.usuario_rol(id_usuario,id_rol) VALUES(5,$1)',[role]);
+  assert.deepEqual((await call(db,5,'verificar_acceso')).roles,['SUPERVISOR']);
+  const catalog=await call(db,5,'administracion',{vista:'resultados'});
+  assert.deepEqual(Object.keys(catalog).sort(),['eventos','opciones','padrones','segmentos']);
+  assert.deepEqual(Object.keys(catalog.opciones[0]).sort(),['foto_url','id_opcion_electoral']);
+  assert.equal((await call(db,5,'participacion',{id_padron:e.padron})).habilitados,1);
+  assert.equal((await call(db,5,'participacion',{id_evento:e.event,modo:'resumen'})).habilitados,1);
+  assert.equal((await call(db,5,'participacion',{id_evento:e.event,modo:'personas'})).detalle.length,1);
+  await assert.rejects(call(db,5,'resultados',{id_padron:e.padron}),/RESULTADOS_NO_DISPONIBLES/);
+  for(const action of ['administracion','guardar_evento','guardar_segmento','guardar_padron','asignar_trabajador','vincular_usuario','guardar_opcion','guardar_candidatura','guardar_foto','preparar_foto','emitir_voto'])await assert.rejects(call(db,5,action),/PERMISO_INSUFICIENTE/);
+  await assert.rejects(call(db,2,'administracion',{vista:'resultados'}),/PERMISO_INSUFICIENTE/);
+  await db.query('INSERT INTO urh_votacion.usuario_rol(id_usuario,id_rol) VALUES(2,$1)',[role]);
+  assert.deepEqual((await call(db,2,'verificar_acceso')).roles.sort(),['ELECTOR','SUPERVISOR']);
+  assert.equal((await call(db,2,'emitir_voto',{id_padron:e.padron,id_opcion_electoral:e.option})).estado,'VOTO_REGISTRADO');
+  await assert.rejects(call(db,2,'guardar_evento'),/PERMISO_INSUFICIENTE/);
+  await call(db,1,'guardar_evento',{id_evento:e.event,dsc_evento:'Evento ficticio',estado:'CERRADO',fecha_inicio:e.inicio,fecha_fin:e.fin});
+  assert.equal((await call(db,5,'resultados',{id_padron:e.padron}))[0].votos,1);
+  await db.query('UPDATE urh_votacion.usuario SET activo=false WHERE id_usuario=5');
+  await assert.rejects(call(db,5,'participacion',{id_padron:e.padron}),/SIN_ACCESO/);
+}finally{await db.close()}})
 
 test('Roles, activo, inexistente y usuario sin roles en PostgreSQL real embebido',async()=>{const db=await database();try{
   assert.deepEqual((await call(db,1,'verificar_acceso')).roles,['ADMINISTRADOR']);assert.deepEqual((await call(db,2,'verificar_acceso')).roles,['ELECTOR']);assert.deepEqual((await call(db,3,'verificar_acceso')).roles.sort(),['ADMINISTRADOR','ELECTOR']);

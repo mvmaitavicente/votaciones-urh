@@ -56,8 +56,11 @@ export function ElectorModule({nombre}:{nombre:string}){
         <p>{p.ya_voto?'Participación registrada':p.disponible?'Votación disponible':'Evento cerrado o fuera de horario'}</p><button disabled={busy||p.ya_voto||!p.disponible} onClick={()=>open(p)}>Ingresar a votar</button>{p.ya_voto&&p.fecha_voto&&<button className="refresh-button" disabled={busy} onClick={()=>setConstancia({padron:p,fecha:new Date(p.fecha_voto as string)})}>{icon.download}Descargar constancia</button>}{p.estado==='CERRADO'&&p.resultados_publicados&&<button className="refresh-button" disabled={busy} onClick={()=>results(p)}>Ver resultados publicados</button>}</article>)}</div>
       {resultados&&<div className="table-scroll"><table><thead><tr><th>Opción</th><th>Votos</th></tr></thead><tbody>{resultados.map(r=><tr key={r.id_opcion_electoral}><td>{r.nombre}</td><td>{r.votos}</td></tr>)}</tbody></table></div>}</>
       : <><header className="ballot-event-heading">
+          <div className="ballot-event-copy">
           <h2>{selected.evento}</h2>
           {selected.dsc_sub_titulo&&<p className="ballot-subtitle">{selected.dsc_sub_titulo}</p>}
+          </div>
+          <img className="ballot-event-logo" src={import.meta.env.BASE_URL+'gestion-rendimiento-2026.png'} alt="Gestión del Rendimiento — Ciclo 2026"/>
         </header>
         <section className="ballot-instructions" aria-labelledby="ballot-instructions-title">
           <span className="ballot-icon" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h6"/></svg></span>
