@@ -39,7 +39,7 @@ function CatalogoApp() {
         <div>
           <p className="eyebrow">UNIDAD DE RECURSOS HUMANOS</p>
           <h1>URH - Sistema de Votaciones</h1>
-          <p className="subtitle">Prueba de selección de segmentos</p>
+          <p className="subtitle">Consulta de segmentos institucionales</p>
         </div>
       </header>
       <section className="main-card" aria-labelledby="form-title">

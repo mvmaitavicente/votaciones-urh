@@ -1,5 +1,21 @@
 # URH — fase funcional de pruebas
 
+## Fotos de candidatos - 12 de octubre de 2026
+
+Implementados selector JPG/PNG/WebP, vista previa data:, limite 2 MB, carga y reemplazo desde candidatura guardada (Editar), foto en opciones y confirmacion electoral, y placeholder sin foto. Funcion foto-candidatura desplegada; usa SDK administrativo exclusivamente en servidor. Verifica roles/estado antes de subir y nuevamente en la RPC al guardar. Bucket publico urh-candidatos con escritura solo servidor. Migraciones 20261012200000_candidatura-foto.sql y 20261012200001_foto-storage.sql YA aplicadas mediante propietario, fuera del historial CLI: foto_key, RPC, RLS storage.objects y politica restrictiva del bucket. No repetir migraciones anteriores. URL y key persistidas; reemplazo elimina la anterior despues del commit. Fallo ambiguo al guardar puede dejar archivo huerfano, conservado para no borrar una foto cuyo commit pudo completarse.
+
+CSP img-src: https://feiztkc9.us-east.insforge.app y conservar data: para vista previa. La funcion usa el host ya autorizado en connect-src. Prueba real HTTPS: carga, reemplazo, lectura publica y persistencia OK; subida SDK anon rechazada. Datos/imagenes de prueba eliminados. No se publico Power Apps; usuario debe compilar/publicar frontend. Primera publicacion de funcion dio 502 temporal; reintento y prueba HTTPS exitosos.
+
+
+## Candidaturas vinculadas a personal - 12 de octubre de 2026
+
+Aplicada en PRONIED la migracion 20261012180000_candidatura-persona.sql con propietario PostgreSQL, fuera del historial CLI. Reemplaza solo urh_operacion, conservando ACL. Reutiliza candidatura.id_persona para personal.id_personal; valida trabajador activo y obtiene nombre en servidor. Administracion devuelve id_persona para editar. El frontend agrega selector obligatorio de trabajador activo y nombre automatico. Candidaturas historicas sin persona se conservan; clientes anteriores que omiten el campo conservan la vinculacion existente al editar. No se publico Power Apps. Verificacion: 77 tests, build y lint; prueba real de guardado/lectura en transaccion revertida.
+
+## Cambio de acceso - 12 de octubre de 2026
+
+Por solicitud del usuario se retiro la lista FUNCTIONAL_GUID_ALLOWED_IDENTITIES de las tres funciones funcionales. El secreto anterior ya no se consulta. Los GUID validos se envian a PostgreSQL, que verifica coincidencia unica de usuario, estado activo y roles. Se mantienen modo test, activacion explicita, caducidad de 24 horas, CORS y controles de solicitudes. Las referencias posteriores a la lista describen el estado anterior a este cambio. El modo GUID sigue sin autenticar al llamante mediante criptografia.
+
+
 ## Estado y límite de seguridad
 
 Implementación aplicada al entorno **PRONIED**, no a una elección de producción. React obtiene `objectId` y `tenantId` mediante el servicio existente basado en `getContext()`, sin pedir que el trabajador los escriba ni utilizar el conector OAuth. Los roles se consultan en PostgreSQL en cada operación.

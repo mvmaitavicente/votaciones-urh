@@ -42,7 +42,7 @@ export function DiagnosticoIdentidad() {
                 <div key={campo}><dt>{campo}</dt><dd>{estado.identidad?.[campo] ?? 'No disponible en este contexto'}</dd></div>
               ))}
             </dl>
-            {incompleta && <p className="catalog-timing">El host no proporcionó todos los campos. Prueba mediante Local Play con tu sesión Microsoft o recarga la aplicación publicada.</p>}
+            {incompleta && <p className="catalog-timing">El host no proporcionó todos los campos. Abre la aplicación desde Local Play con tu sesión Microsoft o recarga la aplicación publicada.</p>}
           </>
         )}
       </div>

@@ -8,7 +8,7 @@ export function AccessModules({ roles, name, demo = false }: { roles: AccessRole
   const module = chosenModule ?? (roles.includes('ADMINISTRADOR') ? 'administracion' : 'elector')
   return <>
     <h2>Bienvenido, {name}</h2>
-    <p className="catalog-timing">{demo ? 'Roles de prueba' : 'Roles asignados'}: {roles.join(' · ')}</p>
+    <p className="catalog-timing">{demo ? 'Roles disponibles' : 'Roles asignados'}: {roles.join(' · ')}</p>
     <nav className="demo-menu" aria-label="Módulos disponibles">
       {roles.includes('ADMINISTRADOR') && <button aria-current={module === 'administracion' ? 'page' : undefined} onClick={() => { setChosenModule('administracion'); setAdminPage(null) }}>Administración</button>}
       {roles.includes('ELECTOR') && <button aria-current={module === 'elector' ? 'page' : undefined} onClick={() => setChosenModule('elector')}>Votaciones</button>}

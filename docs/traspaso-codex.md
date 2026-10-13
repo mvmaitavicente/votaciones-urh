@@ -1,5 +1,39 @@
 # Traspaso para Codex en otra PC
 
+## Unidad en votacion - 12 de octubre de 2026
+
+Aplicada 20261012210000_opciones-unidad.sql mediante propietario (fuera del historial CLI). La RPC opciones devuelve unidad desde candidatura.dsc_unidad; frontend la muestra bajo cargo y en confirmacion. Verificada lectura real de ambas unidades, build y lint. Pendiente publicacion manual del frontend. CSP img-src debe incluir tambien https://cdn.insforge.dev por redireccion del almacenamiento, ademas del host API y data:.
+
+## Fotos de candidatos - 12 de octubre de 2026
+
+Implementados selector JPG/PNG/WebP, vista previa data:, limite 2 MB, carga y reemplazo desde candidatura guardada (Editar), foto en opciones y confirmacion electoral, y placeholder sin foto. Funcion foto-candidatura desplegada; usa SDK administrativo exclusivamente en servidor. Verifica roles/estado antes de subir y nuevamente en la RPC al guardar. Bucket publico urh-candidatos con escritura solo servidor. Migraciones 20261012200000_candidatura-foto.sql y 20261012200001_foto-storage.sql YA aplicadas mediante propietario, fuera del historial CLI: foto_key, RPC, RLS storage.objects y politica restrictiva del bucket. No repetir migraciones anteriores. URL y key persistidas; reemplazo elimina la anterior despues del commit. Fallo ambiguo al guardar puede dejar archivo huerfano, conservado para no borrar una foto cuyo commit pudo completarse.
+
+CSP img-src: https://feiztkc9.us-east.insforge.app y conservar data: para vista previa. La funcion usa el host ya autorizado en connect-src. Prueba real HTTPS: carga, reemplazo, lectura publica y persistencia OK; subida SDK anon rechazada. Datos/imagenes de prueba eliminados. No se publico Power Apps; usuario debe compilar/publicar frontend. Primera publicacion de funcion dio 502 temporal; reintento y prueba HTTPS exitosos.
+
+
+## CORS de Power Apps publicado - 12 de octubre de 2026
+
+Se agrego a ACCESS_ALLOWED_ORIGINS el origen exacto confirmado por el usuario: https://5b61b3f50e90e928bcaee69127947f.06.environment.api.powerplatformusercontent.com (sin barra final). Se conservaron los otros origenes y la caducidad existente. El origen del iframe publicado difiere de apps.powerapps.com. La CSP del entorno tambien debe permitir https://feiztkc9.function2.insforge.app en connect-src.
+
+
+## Unidad de candidatura - 12 de octubre de 2026
+
+Aplicada en PRONIED 20261012190000_candidatura-unidad.sql mediante propietario PostgreSQL (fuera del historial CLI). La RPC guarda dsc_unidad en altas y ediciones y lo devuelve en administracion. Si un cliente anterior omite el campo al editar, conserva su valor. Campo de texto Unidad agregado al formulario. Verificados 77 tests, build, lint y definicion/ACL remotas. No publicado en Power Apps.
+
+## Candidaturas vinculadas a personal - 12 de octubre de 2026
+
+Aplicada en PRONIED la migracion 20261012180000_candidatura-persona.sql con propietario PostgreSQL, fuera del historial CLI. Reemplaza solo urh_operacion, conservando ACL. Reutiliza candidatura.id_persona para personal.id_personal; valida trabajador activo y obtiene nombre en servidor. Administracion devuelve id_persona para editar. El frontend agrega selector obligatorio de trabajador activo y nombre automatico. Candidaturas historicas sin persona se conservan; clientes anteriores que omiten el campo conservan la vinculacion existente al editar. No se publico Power Apps. Verificacion: 77 tests, build y lint; prueba real de guardado/lectura en transaccion revertida.
+
+
+## Personal activo por defecto - cambio aplicado el 12 de octubre de 2026
+
+Se aplico migrations/20261012170000_personal-activo-default.sql en PRONIED mediante conexion PostgreSQL TLS del propietario, dentro de una transaccion. Verificado: 398 de 398 trabajadores activos y DEFAULT true en personal.activo. El default se usa al omitir la columna; un NULL explicito sigue siendo NULL. No repetir el UPDATE: podria reactivar bajas posteriores. No figura en el historial de migraciones CLI; project_admin carece de UPDATE sobre personal y la CLI rechaza los nombres de migraciones historicas existentes. No se cambiaron permisos ni se repitieron migraciones anteriores.
+
+## Cambio de acceso - 12 de octubre de 2026
+
+Por solicitud del usuario se retiro la lista FUNCTIONAL_GUID_ALLOWED_IDENTITIES de las tres funciones funcionales. El secreto anterior ya no se consulta. Los GUID validos se envian a PostgreSQL, que verifica coincidencia unica de usuario, estado activo y roles. Se mantienen modo test, activacion explicita, caducidad de 24 horas, CORS y controles de solicitudes. Las referencias posteriores a la lista describen el estado anterior a este cambio. El modo GUID sigue sin autenticar al llamante mediante criptografia.
+
+
 Fecha de referencia: 12 de octubre de 2026. Este documento resume el trabajo y sus decisiones; **no es una transcripción literal de la conversación**. No contiene claves, tokens ni identificadores personales de la cuenta de prueba. Contrastar siempre con el código y el entorno real: la configuración remota puede cambiar o caducar.
 
 ## Proyecto y objetivo

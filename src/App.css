@@ -67,3 +67,7 @@ select:disabled { background: #f3f5f8; cursor: not-allowed; }
   .main-card { padding: 24px 20px; border-radius: 16px; }
   .result-card { padding: 20px; }
 }
+
+.candidate-photo { width: 96px; height: 112px; object-fit: cover; border-radius: 8px; flex-shrink: 0; }
+.photo-placeholder { display: inline-flex; align-items: center; justify-content: center; background: #edf2f7; color: #52657b; font-size: 0.85rem; }
+.photo-editor { margin: 1rem 0; padding: 1rem; border: 1px solid #d6e2ef; border-radius: 12px; }
